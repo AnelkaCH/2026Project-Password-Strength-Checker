@@ -4,7 +4,15 @@
 
 Before university starts, before all of that, I want to start with a simple security project: a password strength checker. Since I don't really have that much experience in security yet, I think this project marks my first steps. This project will created with python, since I can do python.
 
-## Version 1
+## Version 1.1
+
+### Updated Features
+
+* Just added more common password patterns.
+
+(Note: I'm currently adding a new feature. Hopefully I figure out how to add it.)
+
+## Version 1.0
 
 ### Created Features
 

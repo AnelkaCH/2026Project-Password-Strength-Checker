@@ -1,18 +1,37 @@
 import re
 
 # Some common patterns that I could think of at the moment
-COMMON_PATTERNS = [
+COMMON_PASSWORDS = [
     "password",
-    "admin",
-    "letmein",
-    "welcome",
-    "iloveyou",
+    "123456",
+    "123456789",
+    "12345678",
+    "12345",
+    "qwerty",
     "abc123",
     "password123",
-    "qwerty",
-    "asdf",
-    "zxcv",
-    "12345"
+    "admin",
+    "admin123",
+    "welcome",
+    "welcome123",
+    "letmein",
+    "monkey",
+    "dragon",
+    "football",
+    "baseball",
+    "iloveyou",
+    "sunshine",
+    "princess",
+    "master",
+    "login",
+    "passw0rd",
+    "qwerty123",
+    "1q2w3e4r",
+    "111111",
+    "000000",
+    "asdfghjkl",
+    "user",
+    "guest"
 ]
 
 
