@@ -1,7 +1,7 @@
 import re
 
 # Some common patterns that I could think of at the moment
-COMMON_PASSWORDS = [
+COMMON_PATTERNS = [
     "password",
     "123456",
     "123456789",
@@ -88,6 +88,8 @@ def score_password(password):
 
     if not has_symbol:
         feedback.append("Add symbols.")
+    if not length >16:
+        feedback.append("Consider making your password longer than 16 characters for better security.")
 
     # Common patterns
     lowered = password.lower()
