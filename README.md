@@ -1,6 +1,6 @@
 # Password Strength Checker
 
-A Python CLI tool that evaluates password strength using a scoring engine based on length, character variety, and common pattern detection. Built as a first step into cybersecurity.
+A Python CLI tool that evaluates password strength using a scoring engine based on length, character variety, a common-password breach database, and dictionary word detection. Built as a first step into cybersecurity.
 
 ## Why I built this
 
@@ -8,12 +8,16 @@ Before university started, I wanted to start with a simple security project. I d
 
 ## Features
 
-- Scores passwords on a scale of **0–100**
+- Scores passwords on a scale of **0-100**
 - Assigns strength ratings: Very Weak, Weak, Moderate, Strong, Very Strong
-- Rewards longer passwords (up to 30 points)
+- Rewards longer passwords (up to 40 points)
+- Awards a bonus for clean passwords with no detected weaknesses
 - Checks for uppercase letters, lowercase letters, numbers, and symbols
-- Detects 30+ common weak password patterns (password, qwerty, admin, etc.)
-- Provides personalized feedback and improvement suggestions
+- Checks passwords against a **breached/common password database** (SecLists, default top 1M) with O(1) set lookups
+- Detects **dictionary words** inside passwords via 4+ character substring matching (NLTK `words` corpus)
+- **Leetspeak normalization** catches variants like `P@ssw0rd` that naive matching misses
+- Falls back to a hardcoded common-pattern list when the database file is not present
+- Provides personalized feedback and improvement suggestions, including which list or word matched
 
 ## Tech Stack
 
@@ -32,34 +36,44 @@ Before university started, I wanted to start with a simple security project. I d
 ```
 === Password Strength Checker ===
 
-Enter password: Password123
+Enter password: P@ssw0rd
 
 === RESULTS ===
-Score: 55/100
-Rating: Moderate
+Score: 10/100
+Rating: Very Weak
 
 Feedback:
-- Add symbols.
-- Contains common pattern: password
-- Contains common pattern: password123
+- Consider making your password longer than 16 characters for better security.
+- Password found in a database of 10,000 breached passwords.
+- Contains dictionary word(s): password, sword, pass
+
+Detection:
+- Breached/common password: password (source: database)
+- Dictionary word: password, sword, pass
 ```
 
 ## How It Works
 
-The tool runs locally as a single Python script with no external dependencies. When a password is entered, it calculates a score based on three factors: length (up to 30 points), character variety across four classes (up to 40 points), and penalties for matching common weak patterns. The final score is clamped to 0–100 and mapped to a strength rating, with specific feedback returned to the user.
+The tool runs locally as a Python script. When a password is entered, it calculates a score based on four factors: length (up to 40 points), character variety across four classes (up to 40 points), an exact-match check against a breached/common password database (20 point penalty), and dictionary word detection (10 points per word, capped at 3). Passwords with no detected weaknesses earn a 20 point bonus, so a 16+ character password using all four character classes can score 100. The password is normalized first (lowercased, leetspeak translated, non-alphanumeric characters stripped) so obfuscated variants are caught. The final score is clamped to 0-100 and mapped to a strength rating, with feedback returned to the user.
 
 ## Getting Started
 
 ### Prerequisites
 
 - Python 3.x
+- NLTK with the `words` corpus for dictionary detection (optional, detection skips cleanly without it)
 
 ### Installation
 
 ```bash
 git clone https://github.com/AnelkaCH/PasswordStrengthChecker.git
 cd PasswordStrengthChecker
+pip install nltk
+python -m nltk.downloader words
+python scripts/download_wordlists.py
 ```
+
+`download_wordlists.py` fetches the SecLists top-1M common-password list into `data/common-passwords.txt`. Use `--list 100000` or `--list 10000` for smaller, faster lists.
 
 ### Usage
 
@@ -67,13 +81,17 @@ cd PasswordStrengthChecker
 python password_checker.py
 ```
 
-Enter a password when prompted, and the program will display the score, strength rating, and feedback.
+Enter a password when prompted, and the program will display the score, strength rating, feedback, and detection details.
 
 ## Project Structure
 
 ```
 PasswordStrengthChecker/
 ├── password_checker.py
+├── scripts/
+│   └── download_wordlists.py
+├── data/
+│   └── common-passwords.txt   (gitignored, created by the download script)
 ├── LICENSE
 ├── README.md
 ├── ARCHITECTURE.md
@@ -84,6 +102,10 @@ PasswordStrengthChecker/
 
 - [Architecture](./ARCHITECTURE.md) - design decisions and system structure
 - [Changelog](./CHANGELOG.md) - version history
+
+## References
+
+- NIST SP 800-63B Section 5.1.1.2 (memorized secret verifiers) requires checking passwords against lists of commonly-used, expected, or compromised values.
 
 ## License
 
