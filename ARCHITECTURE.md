@@ -45,9 +45,29 @@ Returns a clamped score (0-100), a list of feedback strings, and a `match_info` 
 Maps a numeric score to one of five strength labels: Very Weak (<30), Weak (<50), Moderate (<70), Strong (<90), Very Strong (90+).
 
 ### main()
-Handles CLI I/O, prompts for a password, calls the scoring functions, and prints the score, rating, pattern-aware entropy analysis, feedback, and detection summary to stdout.
+Handles CLI I/O, prompts for a password, calls the scoring functions, and prints the score, rating, pattern-aware entropy analysis, feedback, and detection summary to stdout. With `--nist` it delegates to `nist_checker.main()` instead.
+
+### nist_checker.check_nist_compliance()
+The NIST SP 800-63B compliance engine (Version 1.3). Accepts a password plus the `match_info` dict produced by `score_password()` and returns a structured report: a 10-item control matrix against Section 5.1.1.2, each item carrying a clause, requirement level (SHALL/SHOULD), status (pass/fail/na/info), and detail, plus an overall `compliant`/`non-compliant` verdict and a summary. The verdict is non-compliant when any SHALL/SHOULD item fails; `na` and `info` items never flip it.
+
+### nist_checker._print_report()
+Renders the report as a control-matrix table to stdout, showing status per item and the cited clause plus detail for failed, not-assessed, and informational items.
 
 ## Design Decisions
+
+- **Compliance as a control matrix** (Version 1.3).
+  **Reasoning:** Auditing a verifier against a regulatory text maps naturally to a checklist of controls, each tied to a specific clause with a SHALL/SHOULD level. This mirrors how GRC analysts encode standards, and it keeps each failure auditable by citing the exact clause that was violated.
+
+- **Feed the v1.1/v1.2 results in, do not re-implement** (Version 1.3).
+  **Reasoning:** The breach and dictionary checks already live in `score_password()` and its `match_info` output; the entropy estimate already comes from zxcvbn. The compliance module consumes those results as inputs, so there is one source of truth and no duplicated list loading or scoring logic.
+
+- **Entropy is a screening tool, not a rejection rule** (Version 1.3).
+  **Reasoning:** SP 800-63B recommends a password-strength meter as guidance to the user, not as a direct rule for rejecting passwords. The compliance item therefore reports entropy as informational and never contributes to a non-compliant verdict, matching the standard's intent.
+
+- **By-design controls still appear in the matrix** (Version 1.3).
+  **Reasoning:** Composition rules, rotation, and hints are verifier-side policies. Since this tool enforces none of them, those controls pass with a note that they are not enforced, which is the correct audit reading rather than omitting them.
+
+## Data Flow
 
 - **Primary dependence on pattern-aware entropy (zxcvbn)** (Version 1.2).
   **Reasoning:** While rule-based checklists are simple, they have been deprecated by modern standards (such as NIST SP 800-63B) in favor of mathematically grounded strength evaluation. Shannon entropy calculates the theoretical upper bound of strength but is a security liability for human-chosen passwords, which are heavily patterned. Therefore, we utilize the `zxcvbn` library exclusively to assess guess-resistance, pattern-awareness, and scenario-based crack times. This is the only realistic way to assess real-world password security.

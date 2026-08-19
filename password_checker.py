@@ -310,6 +310,15 @@ def score_password(password):
 
 
 def main():
+    if "--nist" in sys.argv:
+        sys.argv = [
+            arg for arg in sys.argv
+            if arg != "--nist"
+        ]
+        from nist_checker import main as nist_main
+        nist_main()
+        return
+
     print("=== Password Strength Checker ===")
     print()
 

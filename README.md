@@ -20,6 +20,10 @@ Before university started, I wanted to start with a simple security project. I d
 - Provides personalized feedback and improvement suggestions, including which list or word matched
 - **Entropy Analysis** (Version 1.2):
   - Integrates the **`zxcvbn` library** for a mathematically grounded, pattern-aware strength score and estimated crack times (keyboard walks, dictionary words, and common substitutions)
+- **NIST SP 800-63B Compliance Checker** (Version 1.3):
+  - Runs a password through the actual requirements of **NIST SP 800-63B Section 5.1.1.2** (Memorized Secret Verifiers) and returns a pass/fail control matrix with the cited clause for each failure
+  - Builds the compliance report on the v1.1 breach/dictionary list results and the v1.2 entropy score instead of re-implementing them
+  - Gets the standard right where most meters get it backwards: no composition rules, no periodic rotation, 8-char minimum is compliant if the password is clean, and the entropy meter is treated as a screening tool, not a rejection rule
 
 ## Tech Stack
 
@@ -90,11 +94,21 @@ python password_checker.py
 
 Enter a password when prompted, and the program will display the score, strength rating, feedback, and detection details.
 
+### NIST SP 800-63B Compliance Checker
+
+```bash
+python password_checker.py --nist
+python nist_checker.py --json --username bob --service example.com
+```
+
+Both entry points prompt for a password, run the v1.1/v1.2 analysis, then produce a control matrix against NIST SP 800-63B Section 5.1.1.2 with an overall `compliant` or `non-compliant` verdict. Add `--username` and/or `--service` to enable the context-specific word check. Add `--json` for a machine-readable report.
+
 ## Project Structure
 
 ```
 PasswordStrengthChecker/
 ├── password_checker.py
+├── nist_checker.py
 ├── scripts/
 │   └── download_wordlists.py
 ├── data/
@@ -113,6 +127,7 @@ PasswordStrengthChecker/
 ## References
 
 - NIST SP 800-63B Section 5.1.1.2 (memorized secret verifiers) requires checking passwords against lists of commonly-used, expected, or compromised values.
+- The v1.3 compliance checker is built from the primary text of SP 800-63B Section 5.1.1.2, not secondhand summaries. Most password meters get NIST 800-63B backwards by still enforcing the composition rules the standard explicitly discourages. This checker encodes the actual clauses: 8-character minimum, no composition rules, no periodic rotation, list-based rejection, printable ASCII plus Unicode/emoji acceptance, and no password hints. Translating a regulatory document into automated control checks is the core job of a GRC analyst, and this module does exactly that in miniature.
 
 ## License
 

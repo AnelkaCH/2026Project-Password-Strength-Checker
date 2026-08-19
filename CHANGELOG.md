@@ -3,13 +3,22 @@
 ## [Unreleased]
 
 ### Planned
-- NIST SP 800-63B compliance checker
 - HaveIBeenPwned API integration for breach checking
 - Offline Pwned Passwords range matching
 - Cryptographically secure password generator
 - Diceware-style passphrase generator
 - Encrypted local vault
 - Web UI version
+
+## [2026-08-19] - Version 1.3 (NIST SP 800-63B Compliance Checker)
+
+### Added
+- New `nist_checker.py` module implementing a control-matrix compliance check against NIST SP 800-63B Section 5.1.1.2 (Memorized Secret Verifiers)
+- `check_nist_compliance()` returns a structured report with per-item pass/fail/not-assessed status, the cited clause for each failure, an overall compliant/non-compliant verdict, and a summary
+- 10 controls covering: 8-character minimum, no truncation and 64+ support, no composition rules, no periodic rotation, commonly-used/breach list check, dictionary word check, context-specific word check (optional `--username`/`--service`), printable ASCII/Unicode/emoji acceptance, no password hints, and strength-meter screening
+- Breach list and dictionary results come from the v1.1 `match_info`; entropy comes from the v1.2 zxcvbn analysis, both fed in as inputs rather than re-implemented
+- Entropy is reported as a screening tool only, never a rejection rule, matching the standard's guidance
+- New `--nist` flag on `password_checker.py` runs the compliance flow; `--json` emits a machine-readable report
 
 ## [2026-08-19] - Version 1.2.1 (Removing COMMON_PATTERNS)
 
