@@ -18,10 +18,14 @@ Before university started, I wanted to start with a simple security project. I d
 - **Leetspeak normalization** catches variants like `P@ssw0rd` that naive matching misses
 - Falls back to a hardcoded common-pattern list when the database file is not present
 - Provides personalized feedback and improvement suggestions, including which list or word matched
+- **Entropy Analysis** (Version 1.2):
+  - Integrates the **`zxcvbn` library** for a mathematically grounded, pattern-aware strength score and estimated crack times (keyboard walks, dictionary words, and common substitutions)
 
 ## Tech Stack
 
-`Python`
+`Python` (stdlib math, re, pathlib, urllib)
+`zxcvbn` (required, for pattern-aware analysis)
+`nltk` (optional, for English dictionary word matching)
 
 ## Screenshots / Demo
 
@@ -56,19 +60,22 @@ Detection:
 
 The tool runs locally as a Python script. When a password is entered, it calculates a score based on four factors: length (up to 40 points), character variety across four classes (up to 40 points), an exact-match check against a breached/common password database (20 point penalty), and dictionary word detection (10 points per word, capped at 3). Passwords with no detected weaknesses earn a 20 point bonus, so a 16+ character password using all four character classes can score 100. The password is normalized first (lowercased, leetspeak translated, non-alphanumeric characters stripped) so obfuscated variants are caught. The final score is clamped to 0-100 and mapped to a strength rating, with feedback returned to the user.
 
+In Version 1.2, it also performs a pattern-aware entropy analysis using the `zxcvbn` library. This evaluates password strength based on guess difficulty (representing actual entropy in bits) rather than naive character sets, and estimates realistic cracking times under various attack scenarios (online vs. offline fast/slow hashing).
+
 ## Getting Started
 
 ### Prerequisites
 
 - Python 3.x
-- NLTK with the `words` corpus for dictionary detection (optional, detection skips cleanly without it)
+- `zxcvbn` library (required, for pattern-aware entropy and crack-time estimates)
+- `nltk` with the `words` corpus for dictionary detection (optional, skips cleanly if missing)
 
 ### Installation
 
 ```bash
 git clone https://github.com/AnelkaCH/PasswordStrengthChecker.git
 cd PasswordStrengthChecker
-pip install nltk
+pip install zxcvbn nltk
 python -m nltk.downloader words
 python scripts/download_wordlists.py
 ```

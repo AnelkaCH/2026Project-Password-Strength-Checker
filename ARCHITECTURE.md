@@ -35,18 +35,22 @@ The core scoring engine. It evaluates a password in four phases:
 4. **Dictionary word check** - 10 points deducted per unique matched word, capped at 3 words
 5. **Clean bonus** - 20 points added when neither the common-password nor the dictionary check matched, so a full-score password is achievable
 
-Returns a clamped score (0-100), a list of feedback strings, and a `match_info` dict with boolean flags plus the matched values and sources.
+Returns a clamped score (0-100), a list of feedback strings, and a `match_info` dict containing detailed match flags and an `entropy` dictionary with:
+  - `bits`: Pattern-aware entropy ($\log_2(\text{guesses})$)
+  - `guesses`: Estimate of guesses to crack
+  - `score`: zxcvbn strength score (0-4)
+  - `crack_times`: Display representations of crack times across different setups
 
 ### get_rating()
 Maps a numeric score to one of five strength labels: Very Weak (<30), Weak (<50), Moderate (<70), Strong (<90), Very Strong (90+).
 
 ### main()
-Handles CLI I/O, prompts for a password, calls the scoring functions, and prints the score, rating, feedback, and detection summary to stdout.
+Handles CLI I/O, prompts for a password, calls the scoring functions, and prints the score, rating, pattern-aware entropy analysis, feedback, and detection summary to stdout.
 
 ## Design Decisions
 
-- **Additive scoring with penalties** over entropy-based approaches.
-  **Reasoning:** Simple, auditable, and transparent for a local-first tool. Entropy math is planned for a later version.
+- **Primary dependence on pattern-aware entropy (zxcvbn)** (Version 1.2).
+  **Reasoning:** While rule-based checklists are simple, they have been deprecated by modern standards (such as NIST SP 800-63B) in favor of mathematically grounded strength evaluation. Shannon entropy calculates the theoretical upper bound of strength but is a security liability for human-chosen passwords, which are heavily patterned. Therefore, we utilize the `zxcvbn` library exclusively to assess guess-resistance, pattern-awareness, and scenario-based crack times. This is the only realistic way to assess real-world password security.
 
 - **Set-based exact match for the breach database** over a list scan.
   **Reasoning:** Membership in a `set` is O(1) versus O(n) for a list. This matters when checking against millions of entries per request. RockYou-style lists store full passwords, so exact matching is the correct semantic.
@@ -82,9 +86,10 @@ Handles CLI I/O, prompts for a password, calls the scoring functions, and prints
    - Normalizes the password and checks it against the common-password database (or the hardcoded fallback)
    - Scans normalized substrings against the dictionary and deducts penalties
    - Adds the clean bonus when no detection matched
+   - Runs the `zxcvbn` analyzer to estimate guesses, bits of entropy, and crack times
    - Clamps final score to 0-100
 4. `get_rating()` maps score to a strength label
-5. Score, rating, feedback, and detection details are printed to stdout
+5. Score, rating, pattern-aware entropy metrics, feedback, and detection details are printed to stdout
 6. Program exits, no state is persisted
 
 ## Data Files
@@ -94,7 +99,6 @@ Handles CLI I/O, prompts for a password, calls the scoring functions, and prints
 
 ## Known Limitations / Future Work
 
-- No entropy calculation, scoring is rule-based, not entropy-based
 - Breach check is exact-match only; a full RockYou-scale list will slow first-load slightly but lookups stay O(1)
 - No HaveIBeenPwned API integration (planned for next version)
 - Dictionary substring matching can report incidental matches (for example `sword` inside `password`)
