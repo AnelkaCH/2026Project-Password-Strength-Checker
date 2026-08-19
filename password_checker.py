@@ -10,39 +10,6 @@ except ImportError:
     print("Please install it using: pip install zxcvbn")
     sys.exit(1)
 
-COMMON_PATTERNS = [
-    "password",
-    "123456",
-    "123456789",
-    "12345678",
-    "12345",
-    "qwerty",
-    "abc123",
-    "password123",
-    "admin",
-    "admin123",
-    "welcome",
-    "welcome123",
-    "letmein",
-    "monkey",
-    "dragon",
-    "football",
-    "baseball",
-    "iloveyou",
-    "sunshine",
-    "princess",
-    "master",
-    "login",
-    "passw0rd",
-    "qwerty123",
-    "1q2w3e4r",
-    "111111",
-    "000000",
-    "asdfghjkl",
-    "user",
-    "guest",
-]
-
 LEETSPEAK_TABLE = str.maketrans({
     "@": "a",
     "4": "a",
@@ -287,9 +254,7 @@ def score_password(password):
     common_passwords = _load_common_passwords()
 
     if common_passwords:
-
         if normalized in common_passwords:
-
             match_info["common_password"] = {
                 "matched": True,
                 "value": normalized,
@@ -302,7 +267,6 @@ def score_password(password):
             )
 
         elif lowered in common_passwords:
-
             match_info["common_password"] = {
                 "matched": True,
                 "value": lowered,
@@ -313,27 +277,6 @@ def score_password(password):
                 f"Password found in a database of "
                 f"{len(common_passwords):,} breached passwords."
             )
-
-    else:
-
-        for pattern in COMMON_PATTERNS:
-
-            if (
-                pattern in lowered
-                or pattern in normalized
-            ):
-
-                match_info["common_password"] = {
-                    "matched": True,
-                    "value": pattern,
-                    "source": "hardcoded",
-                }
-
-                feedback.append(
-                    f"Contains common pattern: {pattern}"
-                )
-
-                break
 
     dict_words = _load_dictionary_words()
 

@@ -11,6 +11,16 @@
 - Encrypted local vault
 - Web UI version
 
+## [2026-08-19] - Version 1.2.1 (Removing COMMON_PATTERNS)
+
+### Added
+- (none)
+
+### Changed
+- Remove `COMMON_PATTERNS`
+- `COMMON_PATTERNS` is now handled by `zxcvbn`
+- `score_password()` now returns `match_info` with boolean flags plus matched values and sources.
+
 ## [2026-08-19] - Version 1.2 (Entropy-Based Scoring)
 
 ### Added
@@ -20,7 +30,6 @@
 
 ### Changed
 - Updated `ARCHITECTURE.md` to document the exclusive choice of pattern-aware entropy over naive Shannon formulas
-- Updated `README.md` to mark `zxcvbn` as a required dependency and document installation steps
 
 ## [2026-08-18] - Version 1.1 (Common Password Database + Dictionary Word Detection)
 
