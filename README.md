@@ -1,78 +1,50 @@
 # Password Strength Checker
 
-A Python CLI tool that evaluates password strength using a scoring engine based on length, character variety, a common-password breach database, and dictionary word detection. Built as a first step into cybersecurity.
+A Python CLI tool that scores password strength using zxcvbn pattern-aware entropy, a breached-password database, dictionary word detection, and a full NIST SP 800-63B compliance check.
 
-## Why I built this
-
-Before university started, I wanted to start with a simple security project. I didn't have much experience in security yet, so a password strength checker felt like the right first project, small enough to finish, practical enough to learn from, and directly relevant to where I'm heading.
-
-## Features
-
-- Scores passwords on a scale of **0-100**
-- Assigns strength ratings: Very Weak, Weak, Moderate, Strong, Very Strong
-- Rewards longer passwords (up to 40 points)
-- Awards a bonus for clean passwords with no detected weaknesses
-- Checks for uppercase letters, lowercase letters, numbers, and symbols
-- Checks passwords against a **breached/common password database** (SecLists, default top 1M) with O(1) set lookups
-- Detects **dictionary words** inside passwords via 4+ character substring matching (NLTK `words` corpus)
-- **Leetspeak normalization** catches variants like `P@ssw0rd` that naive matching misses
-- Falls back to a hardcoded common-pattern list when the database file is not present
-- Provides personalized feedback and improvement suggestions, including which list or word matched
-- **Entropy Analysis** (Version 1.2):
-  - Integrates the **`zxcvbn` library** for a mathematically grounded, pattern-aware strength score and estimated crack times (keyboard walks, dictionary words, and common substitutions)
-- **NIST SP 800-63B Compliance Checker** (Version 1.3):
-  - Runs a password through the actual requirements of **NIST SP 800-63B Section 5.1.1.2** (Memorized Secret Verifiers) and returns a pass/fail control matrix with the cited clause for each failure
-  - Builds the compliance report on the v1.1 breach/dictionary list results and the v1.2 entropy score instead of re-implementing them
-  - Gets the standard right where most meters get it backwards: no composition rules, no periodic rotation, 8-char minimum is compliant if the password is clean, and the entropy meter is treated as a screening tool, not a rejection rule
-
-## Tech Stack
-
-`Python` (stdlib math, re, pathlib, urllib)
-`zxcvbn` (required, for pattern-aware analysis)
-`nltk` (optional, for English dictionary word matching)
-
-## Screenshots / Demo
+## Screenshots
 
 ### Good Password
-
 ![good_passwords](/documentation/image.png)
 
 ### Bad Password
-
 ![bad_passwords](/documentation/image-1.png)
 
-```
-=== Password Strength Checker ===
+## Features
 
-Enter password: P@ssw0rd
-
-=== RESULTS ===
-Score: 10/100
-Rating: Very Weak
-
-Feedback:
-- Consider making your password longer than 16 characters for better security.
-- Password found in a database of 10,000 breached passwords.
-- Contains dictionary word(s): password, sword, pass
-
-Detection:
-- Breached/common password: password (source: database)
-- Dictionary word: password, sword, pass
-```
+- Scores passwords from 0 to 100 using zxcvbn pattern-aware entropy estimates
+- Rates them Very Weak, Weak, Moderate, Strong, or Very Strong
+- Flags missing uppercase letters, lowercase letters, numbers, and symbols as improvement guidance only (never affects the score)
+- Checks passwords against a breached/common password database (SecLists, top 1M) using O(1) set lookups
+- Catches dictionary words hidden inside passwords, including leetspeak variants like `P@ssw0rd`
+- Skips the breach check cleanly when the database file is absent (the NIST report marks that control not assessed)
+- Uses the `zxcvbn` library for pattern-aware entropy scoring and realistic crack-time estimates
+- Runs a full NIST SP 800-63B Section 5.1.1.2 compliance check, with a control matrix of pass, fail, not assessed, and informational statuses and the exact clause cited for each failure
+- Gives specific feedback: which word matched, which list it came from, what to fix
 
 ## How It Works
 
-The tool runs locally as a Python script. When a password is entered, it calculates a score based on four factors: length (up to 40 points), character variety across four classes (up to 40 points), an exact-match check against a breached/common password database (20 point penalty), and dictionary word detection (10 points per word, capped at 3). Passwords with no detected weaknesses earn a 20 point bonus, so a 16+ character password using all four character classes can score 100. The password is normalized first (lowercased, leetspeak translated, non-alphanumeric characters stripped) so obfuscated variants are caught. The final score is clamped to 0-100 and mapped to a strength rating, with feedback returned to the user.
+When a password is entered, it gets normalized first (lowercased, leetspeak translated, symbols stripped) so obfuscated versions still get caught properly. The numeric score comes from zxcvbn's pattern-aware guess estimate: guesses are converted to entropy bits via log2, then mapped onto the 0-100 scale using fixed bit thresholds at 28, 36, 60, and 80 bits, clamped, and mapped to a strength rating. Separately, an exact-match check runs against a breached/common password database and a dictionary scan finds embedded words through 4+ character substring matching; both surface only as feedback and detection details, never as score adjustments, and both feed the NIST compliance report.
 
-In Version 1.2, it also performs a pattern-aware entropy analysis using the `zxcvbn` library. This evaluates password strength based on guess difficulty (representing actual entropy in bits) rather than naive character sets, and estimates realistic cracking times under various attack scenarios (online vs. offline fast/slow hashing).
+Version 1.2 added `zxcvbn` for entropy analysis, which looks at guess difficulty instead of just counting character types, and gives crack time estimates under different attack conditions.
+
+Version 1.3 added a NIST compliance checker that runs the password through the real requirements in NIST SP 800-63B Section 5.1.1.2. Most password meters get this standard backwards, they still enforce composition rules and periodic rotation, both of which NIST explicitly tells you to stop doing. This checker follows the actual clauses instead: 8 character minimum, no composition rules, no rotation, list-based rejection, and Unicode/emoji allowed. It builds its report on top of the v1.1 breach/dictionary results and the v1.2 entropy score rather than redoing that work.
+
+## What I Learned
+
+Going in, I assumed a stronger password checker just meant stricter rules, more required symbols, longer minimums, more rejected patterns. Reading the actual NIST standard changed that completely. NIST 800-63B argues the opposite: composition rules and forced rotation push people toward predictable patterns (Password1!, Password2!) and don't actually stop attackers. What works better is checking against real breach data and letting people use long, simple passphrases. That was the most useful thing I took from this project, since "more rules" and "more secure" turned out not to be the same thing.
+
+Building the dictionary detection also taught me that naive substring matching breaks fast. A password like `Passw0rd123` needed leetspeak normalization before matching would catch it, and even then I had to be careful not to flag legitimate substrings inside longer words as false positives.
+
+Translating a legal/technical standard into actual pass/fail code was its own skill. NIST documents aren't written to be turned into logic straight away, so figuring out which clauses were testable rules versus general guidance was most of the work in v1.3.
 
 ## Getting Started
 
 ### Prerequisites
 
 - Python 3.x
-- `zxcvbn` library (required, for pattern-aware entropy and crack-time estimates)
-- `nltk` with the `words` corpus for dictionary detection (optional, skips cleanly if missing)
+- `zxcvbn` (required, for entropy and crack-time analysis)
+- `nltk` with the `words` corpus (optional, skips cleanly if missing)
 
 ### Installation
 
@@ -84,24 +56,24 @@ python -m nltk.downloader words
 python scripts/download_wordlists.py
 ```
 
-`download_wordlists.py` fetches the SecLists top-1M common-password list into `data/common-passwords.txt`. Use `--list 100000` or `--list 10000` for smaller, faster lists.
+`download_wordlists.py` downloads the SecLists top-1M common password list into `data/common-passwords.txt`. Use `--list 100000` or `--list 10000` for smaller, faster lists.
 
-### Usage
+### Using the Password Checker
 
 ```bash
 python password_checker.py
 ```
 
-Enter a password when prompted, and the program will display the score, strength rating, feedback, and detection details.
+Enter a password when prompted to see the score, rating, feedback, and detection details.
 
-### NIST SP 800-63B Compliance Checker
+### Using the NIST Compliance Checker
 
 ```bash
 python password_checker.py --nist
 python nist_checker.py --json --username bob --service example.com
 ```
 
-Both entry points prompt for a password, run the v1.1/v1.2 analysis, then produce a control matrix against NIST SP 800-63B Section 5.1.1.2 with an overall `compliant` or `non-compliant` verdict. Add `--username` and/or `--service` to enable the context-specific word check. Add `--json` for a machine-readable report.
+Both commands prompt for a password, run the full v1.1/v1.2 analysis, and return a compliance matrix against NIST SP 800-63B Section 5.1.1.2, with a compliant/non-compliant verdict. Add `--username` and `--service` to check for context-specific words, and `--json` for a machine-readable report.
 
 ## Project Structure
 
@@ -119,19 +91,18 @@ PasswordStrengthChecker/
 └── CHANGELOG.md
 ```
 
+## Do I plan to do more with this project?
+
+Yes! I actually want to add more features. This project is the first step toward a full password manager: a generator next, then a vault built with Argon2id and AES-256-GCM. More detail in [ARCHITECTURE.md](./ARCHITECTURE.md).
+
 ## Documentation
 
 - [Architecture](./ARCHITECTURE.md) - design decisions and system structure
 - [Changelog](./CHANGELOG.md) - version history
 
-## References
-
-- NIST SP 800-63B Section 5.1.1.2 (memorized secret verifiers) requires checking passwords against lists of commonly-used, expected, or compromised values.
-- The v1.3 compliance checker is built from the primary text of SP 800-63B Section 5.1.1.2, not secondhand summaries. Most password meters get NIST 800-63B backwards by still enforcing the composition rules the standard explicitly discourages. This checker encodes the actual clauses: 8-character minimum, no composition rules, no periodic rotation, list-based rejection, printable ASCII plus Unicode/emoji acceptance, and no password hints. Translating a regulatory document into automated control checks is the core job of a GRC analyst, and this module does exactly that in miniature.
-
 ## License
 
-This project is licensed under the MIT License - see [LICENSE](./LICENSE) for details.
+MIT License, see [LICENSE](./LICENSE) for details.
 
 ## Contact
 
