@@ -8,9 +8,9 @@
 - Cryptographically secure password generator
 - Diceware-style passphrase generator
 - Encrypted local vault
-- Web UI version
+- Web/App UI version
 
-## [2026-08-22] - Version 1.3.1 (The Restructuring)
+## [2026-08-22] Version 1.3.1 - The Restructuring
 
 ### Added
 - A `requirements.txt` file to make downloading dependencies easier.
@@ -19,8 +19,12 @@
 ### Changed
 - Reworded and updated `README.md` to accurately document my development.
 - Moved `nist_checker.py` to the `scripts/` folder since it is not the main script for the project.
+- Reworded how updates are worded in `CHANGELOG.md`
 
-## [2026-08-19] - Version 1.3 (NIST SP 800-63B Compliance Checker)
+### Removed
+- Removed old images
+
+## [2026-08-19] Version 1.3 - NIST SP 800-63B Compliance Checker
 
 ### Added
 - New `nist_checker.py` module implementing a control-matrix compliance check against NIST SP 800-63B Section 5.1.1.2 (Memorized Secret Verifiers)
@@ -30,7 +34,7 @@
 - Entropy is reported as a screening tool only, never a rejection rule, matching the standard's guidance
 - New `--nist` flag on `password_checker.py` runs the compliance flow; `--json` emits a machine-readable report
 
-## [2026-08-19] - Version 1.2.1 (Removing COMMON_PATTERNS)
+## [2026-08-19] Version 1.2.1 - Removing COMMON_PATTERNS
 
 ### Added
 - (none)
@@ -40,7 +44,7 @@
 - `COMMON_PATTERNS` is now handled by `zxcvbn`
 - `score_password()` now returns `match_info` with boolean flags plus matched values and sources.
 
-## [2026-08-19] - Version 1.2 (Entropy-Based Scoring)
+## [2026-08-19] Version 1.2 - Entropy-Based Scoring
 
 ### Added
 - Integrated the `zxcvbn` library for pattern-aware entropy estimation, crack display times, and score mapping as the primary, authoritative entropy provider
@@ -50,7 +54,7 @@
 ### Changed
 - Updated `ARCHITECTURE.md` to document the exclusive choice of pattern-aware entropy over naive Shannon formulas
 
-## [2026-08-18] - Version 1.1 (Common Password Database + Dictionary Word Detection)
+## [2026-08-18] Version 1.1 - Common Password Database + Dictionary Word Detection
 
 ### Added
 - Common Password Database detection: checks input against a SecLists-derived breached/common password list (default top 1M), exact match with O(1) set lookup, -20 point penalty
@@ -67,7 +71,7 @@
 - Scoring rebalanced: length is now worth up to 40 points and clean passwords earn a 20 point bonus, making 100/100 and the Very Strong rating reachable
 - README, ARCHITECTURE, and project structure updated for v1.1
 
-## [2026-07-19] - Version 1.0.3
+## [2026-07-19] Version 1.0.3 - Proper Documentation
 
 ### Added
 - CHANGELOG.md with full version history
@@ -81,7 +85,7 @@
 - Personal profile content that was duplicated in README.md
 - Template files (README_template, CHANGELOG_template, ARCHITECTURE_template)
 
-## [2026-07-14] - Version 1.0.2
+## [2026-07-14] Version 1.0.2 - Optimisation of Feedback
 
 ### Added
 - Feedback suggestion when password is shorter than 16 characters
@@ -89,12 +93,12 @@
 ### Fixed
 - Naming bug in feedback output
 
-## [2026-07-08] - Version 1.0.1
+## [2026-07-08] Version 1.0.1 - New Common Password Patterns
 
 ### Added
 - More common password patterns to the detection list (passw0rd, qwerty123, 1q2w3e4r, 111111, 000000, asdfghjkl, user, guest)
 
-## [2025-06-25] - Version 1.0.0
+## [2025-06-25] Version 1.0.0 - The Password Checker
 
 ### Added
 - Password scoring on a 0–100 scale
