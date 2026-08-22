@@ -79,7 +79,7 @@ In Version 1.2, it also performs a pattern-aware entropy analysis using the `zxc
 ```bash
 git clone https://github.com/AnelkaCH/PasswordStrengthChecker.git
 cd PasswordStrengthChecker
-pip install zxcvbn nltk
+pip install -r requirements.txt
 python -m nltk.downloader words
 python scripts/download_wordlists.py
 ```
