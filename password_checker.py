@@ -315,7 +315,7 @@ def main():
             arg for arg in sys.argv
             if arg != "--nist"
         ]
-        from nist_checker import main as nist_main
+        from scripts.nist_checker import main as nist_main
         nist_main()
         return
 

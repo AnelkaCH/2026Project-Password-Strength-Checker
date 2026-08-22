@@ -5,10 +5,13 @@ A Python CLI tool that scores password strength using zxcvbn pattern-aware entro
 ## Screenshots
 
 ### Good Password
-![good_passwords](/documentation/image.png)
+![good_passwords](/documentation/good_password.png)
 
 ### Bad Password
-![bad_passwords](/documentation/image-1.png)
+![bad_passwords](/documentation/bad_password.png)
+
+### NIST Compliance Report
+![compliance_report](/documentation/compliance_report.png)
 
 ## Features
 
@@ -70,7 +73,7 @@ Enter a password when prompted to see the score, rating, feedback, and detection
 
 ```bash
 python password_checker.py --nist
-python nist_checker.py --json --username bob --service example.com
+python scripts/nist_checker.py --json --username bob --service example.com
 ```
 
 Both commands prompt for a password, run the full v1.1/v1.2 analysis, and return a compliance matrix against NIST SP 800-63B Section 5.1.1.2, with a compliant/non-compliant verdict. Add `--username` and `--service` to check for context-specific words, and `--json` for a machine-readable report.
@@ -80,9 +83,9 @@ Both commands prompt for a password, run the full v1.1/v1.2 analysis, and return
 ```
 PasswordStrengthChecker/
 ├── password_checker.py
-├── nist_checker.py
 ├── scripts/
-│   └── download_wordlists.py
+│   ├── download_wordlists.py
+│   └── nist_checker.py
 ├── data/
 │   └── common-passwords.txt   (gitignored, created by the download script)
 ├── LICENSE

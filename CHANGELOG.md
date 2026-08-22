@@ -10,6 +10,16 @@
 - Encrypted local vault
 - Web UI version
 
+## [2026-08-22] - Version 1.3.1 (The Restructuring)
+
+### Added
+- A `requirements.txt` file to make downloading dependencies easier.
+- New images for documentation
+
+### Changed
+- Reworded and updated `README.md` to accurately document my development.
+- Moved `nist_checker.py` to the `scripts/` folder since it is not the main script for the project.
+
 ## [2026-08-19] - Version 1.3 (NIST SP 800-63B Compliance Checker)
 
 ### Added

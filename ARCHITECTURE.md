@@ -45,12 +45,12 @@ Returns a clamped score (0-100), a list of feedback strings, and a `match_info` 
 Maps a numeric score to one of five strength labels: Very Weak (<30), Weak (<50), Moderate (<70), Strong (<90), Very Strong (90+).
 
 ### main()
-Handles CLI I/O, prompts for a password, calls the scoring functions, and prints the score, rating, pattern-aware entropy analysis, feedback, and detection summary to stdout. With `--nist` it delegates to `nist_checker.main()` instead.
+Handles CLI I/O, prompts for a password, calls the scoring functions, and prints the score, rating, pattern-aware entropy analysis, feedback, and detection summary to stdout. With `--nist` it delegates to `scripts/nist_checker.main()` instead.
 
-### nist_checker.check_nist_compliance()
+### scripts/nist_checker.check_nist_compliance()
 The NIST SP 800-63B compliance engine (Version 1.3). Accepts a password plus the `match_info` dict produced by `score_password()` and returns a structured report: a 10-item control matrix against Section 5.1.1.2, each item carrying a clause, requirement level (SHALL/SHOULD), status (pass/fail/na/info), and detail, plus an overall `compliant`/`non-compliant` verdict and a summary. The verdict is non-compliant when any SHALL/SHOULD item fails; `na` and `info` items never flip it.
 
-### nist_checker._print_report()
+### scripts/nist_checker._print_report()
 Renders the report as a control-matrix table to stdout, showing status per item and the cited clause plus detail for failed, not-assessed, and informational items.
 
 ## Design Decisions
