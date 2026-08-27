@@ -92,6 +92,9 @@ PasswordStrengthChecker/
 ├── scripts/
 │   ├── download_wordlists.py
 │   ├── hibp.py
+│   ├── common_pw_and_dict.py
+│   ├── pw_normalizer.py
+│   ├── pw_scoring.py
 │   └── nist_checker.py
 ├── data/
 │   └── common-passwords.txt   (gitignored, created by the download script)
