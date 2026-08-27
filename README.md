@@ -26,6 +26,8 @@ A Python CLI tool that scores password strength using zxcvbn pattern-aware entro
 - Uses the `zxcvbn` library for pattern-aware entropy scoring and realistic crack-time estimates
 - Runs a full NIST SP 800-63B Section 5.1.1.2 compliance check, with a control matrix of pass, fail, not assessed, and informational statuses and the exact clause cited for each failure
 - Gives specific feedback: which word matched, which list it came from, what to fix
+- Checks passwords against the HaveIBeenPwned Pwned Passwords API using k-anonymity: only a 5-character SHA-1 prefix is sent, while the plaintext password and full hash remain local; no API key is required
+- Caps the score at 20 when a breach is found and surfaces an explicit warning if the API check fails
 
 ## How It Works
 
