@@ -26,6 +26,7 @@
 - `score_password()` now calls `hibp_check()` after all local checks
 - `match_info` schema extended with the `hibp` key
 - Made `nltk` and `zxcvbn` required, no longer optional
+- Changed zxcvbn scoring to the one already made by zxcvbn
 
 ## [2026-08-22] Version 1.3.1 - The Restructuring
 

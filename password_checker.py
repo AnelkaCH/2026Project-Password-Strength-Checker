@@ -4,7 +4,6 @@ import sys
 from pathlib import Path
 import zxcvbn
 
-from nltk.corpus import words as nltk_words
 from scripts.hibp import hibp_check
 
 try:
@@ -50,22 +49,8 @@ def get_rating(score):
     else:
         return "Very Strong"
 
-def entropy_to_score(bits):
-
-    if bits < 28:
-        return int((bits / 28) * 30)
-
-    elif bits < 36:
-        return 30 + int(((bits - 28) / 8) * 20)
-
-    elif bits < 60:
-        return 50 + int(((bits - 36) / 24) * 20)
-
-    elif bits < 80:
-        return 70 + int(((bits - 60) / 20) * 20)
-
-    else:
-        return 100
+def entropy_to_score(zxcvbn_score):
+    return zxcvbn_score * 25
 
 def normalize(password):
     lowered = password.lower()
@@ -161,7 +146,7 @@ def score_password(password):
         except Exception:
             zxcvbn_failed = True
 
-    score = entropy_to_score(zxcvbn_bits)
+    score = entropy_to_score(zxcvbn_score)
 
     length = len(password)
 
