@@ -84,6 +84,8 @@ python scripts/nist_checker.py --json --username bob --service example.com
 
 Both commands prompt for a password, run the full v1.1/v1.2 analysis, and return a compliance matrix against NIST SP 800-63B Section 5.1.1.2, with a compliant/non-compliant verdict. Add `--username` and `--service` to check for context-specific words, and `--json` for a machine-readable report.
 
+You can also generate the report after running `password_checker.py`, where there will be a question `Do you want a compliance report? (Y/N/Whatever): `
+
 ## Project Structure
 
 ```
@@ -94,6 +96,7 @@ PasswordStrengthChecker/
 │   ├── hibp.py
 │   ├── common_pw_and_dict.py
 │   ├── pw_normalizer.py
+│   ├── core.py
 │   ├── pw_scoring.py
 │   └── nist_checker.py
 ├── data/

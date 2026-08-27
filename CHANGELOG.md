@@ -9,6 +9,15 @@
 - Encrypted local vault
 - Web/App UI version
 
+## [2026-08-27] Version 1.4.1 - The Restrucuture
+
+### Added
+- After running `password_checker.py`, users can generate a compliance report by answer the question at the end
+
+### Changed
+- Changed zxcvbn scoring to the one already made by zxcvbn
+- Restructure `password_checker.py` to make things more modular
+
 ## [2026-08-27] Version 1.4 - HaveIBeenPwned API Integration
 
 ### Added
@@ -26,8 +35,6 @@
 - `score_password()` now calls `hibp_check()` after all local checks
 - `match_info` schema extended with the `hibp` key
 - Made `nltk` and `zxcvbn` required, no longer optional
-- Changed zxcvbn scoring to the one already made by zxcvbn
-- Restructure `password_checker.py` to make things more modular
 
 ## [2026-08-22] Version 1.3.1 - The Restructuring
 

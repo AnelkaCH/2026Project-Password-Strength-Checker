@@ -6,7 +6,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import password_checker
+from scripts.core import score_password
+from scripts.common_pw_and_dict import _load_common_passwords, _load_dictionary_words
 
 STANDARD = "NIST SP 800-63B"
 SECTION = "5.1.1.2 Memorized Secret Verifiers"
@@ -86,7 +87,7 @@ def check_nist_compliance(password, match_info, username=None, service=None):
     })
 
     common = match_info.get("common_password", {})
-    breach_available = bool(password_checker._load_common_passwords())
+    breach_available = bool(_load_common_passwords())
     if not breach_available:
         breach_status = "na"
         breach_detail = "Common/breach list not available (data file missing)."
@@ -108,7 +109,7 @@ def check_nist_compliance(password, match_info, username=None, service=None):
         "detail": breach_detail,
     })
 
-    dict_available = bool(password_checker._load_dictionary_words())
+    dict_available = bool(_load_dictionary_words())
     dict_match = match_info.get("dictionary_word", {})
     if not dict_available:
         dict_status = "na"
@@ -258,7 +259,7 @@ def _print_report(report):
     )
 
 
-def main():
+def main(given_password=None):
     parser = argparse.ArgumentParser(
         description="NIST SP 800-63B compliance checker"
     )
@@ -276,10 +277,12 @@ def main():
         help="Service name for the context-specific word check",
     )
     args = parser.parse_args()
+    if given_password  is not None:
+        password = given_password
+    else:
+        password = input("Enter password: ")
 
-    password = input("Enter password: ")
-
-    _, _, match_info = password_checker.score_password(password)
+    _, _, match_info = score_password(password)
     report = check_nist_compliance(
         password,
         match_info,
