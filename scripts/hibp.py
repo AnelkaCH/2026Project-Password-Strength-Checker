@@ -37,6 +37,15 @@ def _query_range(prefix):
             f"Unexpected error querying HIBP: {exc}"
         ) from exc
 
+def _parse_response(response_text, suffix):
+    target = suffix.upper()
+    for line in response_text.splitlines():
+        parts = line.split(":")
+        if len(parts) == 2 and parts[0].strip() == target:
+            return int(parts[1].strip())
+    return 0
+
+
 # testing
 prefix, suffix = _hash_password("password")
 print("Prefix:", prefix)
@@ -48,3 +57,12 @@ try:
     print("Response length:", len(result))
 except HIBPError as e:
     print("API error:", e)
+    result = None
+
+FAKE_RESPONSE = """AABBCC:3\n1E4C9B93F3F0682250B6CF8331B7EE68FD8:10000000\nDDEEFF:1"""
+count = _parse_response(FAKE_RESPONSE, suffix)
+print("Parse test (expect 10000000):", count)
+
+if result:
+    live_count = _parse_response(result, suffix)
+    print("Live breach count for 'password':", live_count)
