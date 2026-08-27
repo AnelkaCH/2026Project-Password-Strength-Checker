@@ -10,6 +10,8 @@ except ImportError:
     print("Please install it using: pip install zxcvbn")
     sys.exit(1)
 
+from scripts.hibp import hibp_check
+
 LEETSPEAK_TABLE = str.maketrans({
     "@": "a",
     "4": "a",
@@ -246,6 +248,13 @@ def score_password(password):
             "score": zxcvbn_score,
             "crack_times": zxcvbn_crack_times,
         },
+
+        "hibp": {
+            "checked": False,
+            "pwned": False,
+            "count": 0,
+            "error": None,
+        },
     }
 
     lowered = password.lower()
@@ -300,6 +309,21 @@ def score_password(password):
                 "Contains dictionary word(s): "
                 + ", ".join(top)
             )
+
+    hibp_result = hibp_check(password)
+    match_info["hibp"] = hibp_result
+
+    if not hibp_result["checked"]:
+        feedback.append(
+            f"HaveIBeenPwned check failed: {hibp_result['error']}. "
+            "Do not treat this as confirmation the password is safe."
+        )
+    elif hibp_result["pwned"]:
+        feedback.append(
+            f"Password found in {hibp_result['count']:,} known data breach(es) "
+            "(HaveIBeenPwned). Do not use this password."
+        )
+        score = min(score, 20)
 
     score = max(
         0,
@@ -422,6 +446,15 @@ def main():
         print(
             "- Dictionary word: none"
         )
+
+    hibp = match_info["hibp"]
+
+    if not hibp["checked"]:
+        print(f"- HaveIBeenPwned: check failed ({hibp['error']})")
+    elif hibp["pwned"]:
+        print(f"- HaveIBeenPwned: found in {hibp['count']:,} breach(es)")
+    else:
+        print("- HaveIBeenPwned: not found in any known breach")
 
 
 if __name__ == "__main__":

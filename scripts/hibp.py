@@ -54,11 +54,12 @@ def hibp_check(password):
     except HIBPError as exc:
         return {"checked": False, "pwned": False, "count": 0, "error": str(exc)}
 
-# testing
-for pw in ["password", "f47ac10b-58cc-4372-a567-0e02b2c3d479"]:
-    result = hibp_check(pw)
-    if result["checked"]:
-        status = f"PWNED x{result['count']:,}" if result["pwned"] else "clean"
-        print(f"{pw!r}: {status}")
-    else:
-        print(f"{pw!r}: check failed -- {result['error']}")
+# For testing purposes
+if __name__ == "__main__":
+    for pw in ["password", "f47ac10b-58cc-4372-a567-0e02b2c3d479"]:
+        result = hibp_check(pw)
+        if result["checked"]:
+            status = f"PWNED x{result['count']:,}" if result["pwned"] else "clean"
+            print(f"{pw!r}: {status}")
+        else:
+            print(f"{pw!r}: check failed -- {result['error']}")
