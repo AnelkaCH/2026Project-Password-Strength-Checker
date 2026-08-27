@@ -9,7 +9,7 @@
 - Encrypted local vault
 - Web/App UI version
 
-## [2026-08-27] Version 1.4.1 - The Restrucuture
+## [2026-08-27] Version 1.4.1 - The Restructure
 
 ### Added
 - After running `password_checker.py`, users can generate a compliance report by answer the question at the end
