@@ -3,12 +3,28 @@
 ## [Unreleased]
 
 ### Planned
-- HaveIBeenPwned API integration for breach checking
 - Offline Pwned Passwords range matching
 - Cryptographically secure password generator
 - Diceware-style passphrase generator
 - Encrypted local vault
 - Web/App UI version
+
+## [2026-08-27] Version 1.4 - HaveIBeenPwned API Integration
+
+### Added
+- New `scripts/hibp.py` module implementing the HIBP Pwned Passwords k-anonymity range lookup
+- `_hash_password()` hashes the password with SHA-1 and splits it into a 5-character prefix and 35-character suffix; only the prefix is ever sent over the network
+- `_query_range()` calls `GET https://api.pwnedpasswords.com/range/{prefix}` using stdlib `urllib`; raises `HIBPError` on any network error, timeout, or non-200 response so callers can never silently treat an outage as safe
+- `_parse_response()` scans the returned `SUFFIX:COUNT` blob locally and returns the breach count for the password's suffix, or 0 if not found
+- `hibp_check()` wires the three private functions into a single public call returning `{checked, pwned, count, error}`; the full hash and plaintext password never leave the process (k-anonymity model, documented explicitly)
+- `match_info["hibp"]` field added to the `score_password()` return value
+- Score is capped at 20 when a password is found in a known breach
+- Feedback warns when the check fails, with explicit instruction not to treat a failure as confirmation the password is safe
+- HIBP result printed in the Detection section of the CLI output
+
+### Changed
+- `score_password()` now calls `hibp_check()` after all local checks
+- `match_info` schema extended with the `hibp` key
 
 ## [2026-08-22] Version 1.3.1 - The Restructuring
 

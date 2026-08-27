@@ -20,7 +20,9 @@ A Python CLI tool that scores password strength using zxcvbn pattern-aware entro
 - Flags missing uppercase letters, lowercase letters, numbers, and symbols as improvement guidance only (never affects the score)
 - Checks passwords against a breached/common password database (SecLists, top 1M) using O(1) set lookups
 - Catches dictionary words hidden inside passwords, including leetspeak variants like `P@ssw0rd`
-- Skips the breach check cleanly when the database file is absent (the NIST report marks that control not assessed)
+- Checks the password against the HaveIBeenPwned Pwned Passwords API using k-anonymity: only a 5-character SHA-1 prefix is sent, the plaintext and full hash never leave your machine; no API key required
+- Caps the score at 20 when a breach hit is found; treats an API failure as an explicit warning rather than a pass
+- Skips the local breach check cleanly when the database file is absent (the NIST report marks that control not assessed)
 - Uses the `zxcvbn` library for pattern-aware entropy scoring and realistic crack-time estimates
 - Runs a full NIST SP 800-63B Section 5.1.1.2 compliance check, with a control matrix of pass, fail, not assessed, and informational statuses and the exact clause cited for each failure
 - Gives specific feedback: which word matched, which list it came from, what to fix
@@ -33,6 +35,8 @@ Version 1.2 added `zxcvbn` for entropy analysis, which looks at guess difficulty
 
 Version 1.3 added a NIST compliance checker that runs the password through the real requirements in NIST SP 800-63B Section 5.1.1.2. Most password meters get this standard backwards, they still enforce composition rules and periodic rotation, both of which NIST explicitly tells you to stop doing. This checker follows the actual clauses instead: 8 character minimum, no composition rules, no rotation, list-based rejection, and Unicode/emoji allowed. It builds its report on top of the v1.1 breach/dictionary results and the v1.2 entropy score rather than redoing that work.
 
+Version 1.4 added HaveIBeenPwned API integration. After all local checks run, the password is hashed with SHA-1 and split: only the first 5 characters (prefix) go to the API, the remaining 35 (suffix) stay local. The API returns every hash suffix it knows that starts with that prefix, and the suffix is compared locally. This k-anonymity design means the plaintext password and full hash are never sent anywhere. If the password appears in a known breach the score is capped at 20 regardless of entropy, and if the API is unreachable the tool surfaces an explicit warning instead of silently passing.
+
 ## What I Learned
 
 Going in, I assumed a stronger password checker just meant stricter rules, more required symbols, longer minimums, more rejected patterns. Reading the actual NIST standard changed that completely. NIST 800-63B argues the opposite: composition rules and forced rotation push people toward predictable patterns (Password1!, Password2!) and don't actually stop attackers. What works better is checking against real breach data and letting people use long, simple passphrases. That was the most useful thing I took from this project, since "more rules" and "more secure" turned out not to be the same thing.
@@ -40,6 +44,8 @@ Going in, I assumed a stronger password checker just meant stricter rules, more 
 Building the dictionary detection also taught me that naive substring matching breaks fast. A password like `Passw0rd123` needed leetspeak normalization before matching would catch it, and even then I had to be careful not to flag legitimate substrings inside longer words as false positives.
 
 Translating a legal/technical standard into actual pass/fail code was its own skill. NIST documents aren't written to be turned into logic straight away, so figuring out which clauses were testable rules versus general guidance was most of the work in v1.3.
+
+The HIBP integration in v1.4 taught me how to consume a real security API safely. The k-anonymity model (send only 5 chars of the hash, compare the rest locally) is a clean solution to the privacy problem of "how do you check if a password is breached without sending the password". Handling the failure case correctly was the other lesson: an API timeout should never look the same as a clean result.
 
 ## Getting Started
 
@@ -85,6 +91,7 @@ PasswordStrengthChecker/
 ├── password_checker.py
 ├── scripts/
 │   ├── download_wordlists.py
+│   ├── hibp.py
 │   └── nist_checker.py
 ├── data/
 │   └── common-passwords.txt   (gitignored, created by the download script)

@@ -53,6 +53,21 @@ The NIST SP 800-63B compliance engine (Version 1.3). Accepts a password plus the
 ### scripts/nist_checker._print_report()
 Renders the report as a control-matrix table to stdout, showing status per item and the cited clause plus detail for failed, not-assessed, and informational items.
 
+### scripts/hibp.HIBPError
+A typed exception raised by `_query_range()` whenever the API call fails for any reason (network error, timeout, non-200 HTTP status). Keeping it typed lets `hibp_check()` catch it precisely without swallowing unrelated exceptions.
+
+### scripts/hibp._hash_password()
+Hashes the password with SHA-1 and splits the uppercase hex digest at position 5, returning `(prefix, suffix)`. Only the 5-character prefix ever leaves this process. The 35-character suffix stays local and is compared client-side against the API response. This is the k-anonymity model used by the HIBP Pwned Passwords API.
+
+### scripts/hibp._query_range()
+Calls `GET https://api.pwnedpasswords.com/range/{prefix}` with a 10-second timeout via stdlib `urllib`. Returns the raw response text (one `SUFFIX:COUNT` pair per line). Raises `HIBPError` on any failure so the caller can never silently treat an outage as "password is safe".
+
+### scripts/hibp._parse_response()
+Scans the returned blob line by line, looking for a case-insensitive match against the local suffix. Returns the integer breach count if found, or 0 if the suffix is absent (password not seen in any known breach). Testable offline with a hardcoded fake response.
+
+### scripts/hibp.hibp_check()
+Public entry point. Wires `_hash_password` -> `_query_range` -> `_parse_response` and returns a clean result dict: `{"checked": True, "pwned": bool, "count": int, "error": None}` on success, or `{"checked": False, "pwned": False, "count": 0, "error": str}` on failure. Callers must inspect `checked` before treating `pwned: False` as confirmation of safety.
+
 ## Design Decisions
 
 - **Compliance as a control matrix** (Version 1.3).
@@ -120,7 +135,7 @@ Renders the report as a control-matrix table to stdout, showing status per item 
 ## Known Limitations / Future Work
 
 - Breach check is exact-match only; a full RockYou-scale list will slow first-load slightly but lookups stay O(1)
-- No HaveIBeenPwned API integration (planned for next version)
+- HIBP check adds ~1-2s network latency per run; no caching between runs
 - Dictionary substring matching can report incidental matches (for example `sword` inside `password`)
 - No password generation suggestions
 - No GUI, CLI only
