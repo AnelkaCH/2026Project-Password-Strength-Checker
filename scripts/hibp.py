@@ -45,24 +45,20 @@ def _parse_response(response_text, suffix):
             return int(parts[1].strip())
     return 0
 
+def hibp_check(password):
+    try:
+        prefix, suffix = _hash_password(password)
+        response_text = _query_range(prefix)
+        count = _parse_response(response_text, suffix)
+        return {"checked": True, "pwned": count > 0, "count": count, "error": None}
+    except HIBPError as exc:
+        return {"checked": False, "pwned": False, "count": 0, "error": str(exc)}
 
 # testing
-prefix, suffix = _hash_password("password")
-print("Prefix:", prefix)
-print("Suffix:", suffix)
-
-try:
-    result = _query_range(prefix)
-    print("API request successful!")
-    print("Response length:", len(result))
-except HIBPError as e:
-    print("API error:", e)
-    result = None
-
-FAKE_RESPONSE = """AABBCC:3\n1E4C9B93F3F0682250B6CF8331B7EE68FD8:10000000\nDDEEFF:1"""
-count = _parse_response(FAKE_RESPONSE, suffix)
-print("Parse test (expect 10000000):", count)
-
-if result:
-    live_count = _parse_response(result, suffix)
-    print("Live breach count for 'password':", live_count)
+for pw in ["password", "f47ac10b-58cc-4372-a567-0e02b2c3d479"]:
+    result = hibp_check(pw)
+    if result["checked"]:
+        status = f"PWNED x{result['count']:,}" if result["pwned"] else "clean"
+        print(f"{pw!r}: {status}")
+    else:
+        print(f"{pw!r}: check failed -- {result['error']}")
