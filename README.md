@@ -54,8 +54,8 @@ The HIBP integration in v1.4 taught me how to consume a real security API safely
 ### Prerequisites
 
 - Python 3.x
-- `zxcvbn` (required, for entropy and crack-time analysis)
-- `nltk` with the `words` corpus (optional, skips cleanly if missing)
+- `zxcvbn` (for entropy and crack-time analysis)
+- `nltk` with the `words` corpus (skips cleanly if missing)
 
 ### Installation
 

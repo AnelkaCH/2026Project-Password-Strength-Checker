@@ -2,15 +2,22 @@ import math
 import re
 import sys
 from pathlib import Path
+import zxcvbn
+
+from nltk.corpus import words as nltk_words
+from scripts.hibp import hibp_check
 
 try:
-    import zxcvbn
+    from nltk.corpus import words as nltk_words
+    nltk_words.words()
 except ImportError:
-    print("Error: The 'zxcvbn' library is required to run this tool.")
-    print("Please install it using: pip install zxcvbn")
+    print("Error: The 'nltk' library is required.")
+    print("Please install it using: pip install nltk")
     sys.exit(1)
-
-from scripts.hibp import hibp_check
+except LookupError:
+    print("Error: The NLTK 'words' corpus is required.")
+    print('Please run: python -c "import nltk; nltk.download(\'words\')"')
+    sys.exit(1)
 
 LEETSPEAK_TABLE = str.maketrans({
     "@": "a",
@@ -29,7 +36,6 @@ DATA_FILE = Path(__file__).parent / "data" / "common-passwords.txt"
 
 _cached_passwords = None
 _cached_words = None
-_words_warned = False
 
 
 def get_rating(score):
@@ -45,15 +51,6 @@ def get_rating(score):
         return "Very Strong"
 
 def entropy_to_score(bits):
-    """
-    Convert guessability-derived entropy into a 0-100 score.
-
-    < 28 bits  -> Very Weak
-    < 36 bits  -> Weak
-    < 60 bits  -> Moderate
-    < 80 bits  -> Strong
-    >= 80 bits -> Very Strong
-    """
 
     if bits < 28:
         return int((bits / 28) * 30)
@@ -97,35 +94,19 @@ def _load_common_passwords():
 
 
 def _load_dictionary_words():
-    global _cached_words, _words_warned
+    global _cached_words
+
     if _cached_words is not None:
         return _cached_words
-    try:
-        from nltk.corpus import words as nltk_words
-        raw = nltk_words.words()
-    except LookupError:
-        try:
-            import nltk
-            nltk.download("words", quiet=True)
-            from nltk.corpus import words as nltk_words
-            raw = nltk_words.words()
-        except Exception:
-            raw = None
-    except Exception:
-        raw = None
-    if raw is None:
-        if not _words_warned:
-            print(
-                "Dictionary check skipped: install NLTK and its "
-                "'words' corpus (pip install nltk)."
-            )
-            _words_warned = True
-        _cached_words = set()
-    else:
-        _cached_words = {
-            w for w in raw
-            if len(w) >= 4
-        }
+
+    raw = nltk_words.words()
+
+    _cached_words = {
+        w.lower()
+        for w in raw
+        if len(w) >= 4
+    }
+
     return _cached_words
 
 
@@ -151,6 +132,7 @@ def score_password(password):
     zxcvbn_guesses = 0
     zxcvbn_score = 0
     zxcvbn_crack_times = {}
+    zxcvbn_failed = False
 
     if password:
         try:
@@ -177,7 +159,7 @@ def score_password(password):
             )
 
         except Exception:
-            pass
+            zxcvbn_failed = True
 
     score = entropy_to_score(zxcvbn_bits)
 
@@ -230,6 +212,11 @@ def score_password(password):
             "16 characters."
         )
 
+    if zxcvbn_failed:
+        feedback.append(
+            "Entropy analysis failed; strength score may be inaccurate."
+        )
+
     match_info = {
         "common_password": {
             "matched": False,
@@ -247,6 +234,7 @@ def score_password(password):
             "guesses": zxcvbn_guesses,
             "score": zxcvbn_score,
             "crack_times": zxcvbn_crack_times,
+            "failed": zxcvbn_failed,
         },
 
         "hibp": {
