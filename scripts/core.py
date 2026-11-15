@@ -156,6 +156,9 @@ def score_password(password):
                 f"{len(common_passwords):,} breached passwords."
             )
 
+        if match_info["common_password"]["matched"]:
+            score = min(score, 20)
+
     dict_words = _load_dictionary_words()
 
     if dict_words:
