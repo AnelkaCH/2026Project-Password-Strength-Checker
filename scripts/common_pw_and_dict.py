@@ -13,7 +13,7 @@ except LookupError:
     print('Please run: python -c "import nltk; nltk.download(\'words\')"')
     sys.exit(1)
 
-DATA_FILE = Path(__file__).parent / "data" / "common-passwords.txt"
+DATA_FILE = Path(__file__).parent.parent / "data" / "common-passwords.txt"
 
 _cached_passwords = None
 _cached_words = None
