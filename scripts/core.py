@@ -3,7 +3,7 @@ import math
 import re
 
 from scripts.pw_scoring import entropy_to_score
-from scripts.pw_normalizer import normalize
+from scripts.pw_normalizer import normalize, normalize_symbols
 from scripts.common_pw_and_dict import _load_dictionary_words, _load_common_passwords, _find_dictionary_words
 from scripts.hibp import hibp_check
 
@@ -132,10 +132,13 @@ def score_password(password):
     common_passwords = _load_common_passwords()
 
     if common_passwords:
-        if normalized in common_passwords:
+        candidates = (normalized, normalize_symbols(password), lowered)
+        hit = next((c for c in candidates if c in common_passwords), None)
+
+        if hit is not None:
             match_info["common_password"] = {
                 "matched": True,
-                "value": normalized,
+                "value": hit,
                 "source": "database",
             }
 
@@ -144,19 +147,6 @@ def score_password(password):
                 f"{len(common_passwords):,} breached passwords."
             )
 
-        elif lowered in common_passwords:
-            match_info["common_password"] = {
-                "matched": True,
-                "value": lowered,
-                "source": "database",
-            }
-
-            feedback.append(
-                f"Password found in a database of "
-                f"{len(common_passwords):,} breached passwords."
-            )
-
-        if match_info["common_password"]["matched"]:
             score = min(score, 20)
 
     dict_words = _load_dictionary_words()
