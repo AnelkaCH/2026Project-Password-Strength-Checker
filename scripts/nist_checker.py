@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from scripts.core import score_password
 from scripts.common_pw_and_dict import _load_common_passwords, _load_dictionary_words
+from scripts.pw_normalizer import normalize
 
 STANDARD = "NIST SP 800-63B"
 SECTION = "5.1.1.2 Memorized Secret Verifiers"
@@ -109,15 +110,19 @@ def check_nist_compliance(password, match_info, username=None, service=None):
         "detail": breach_detail,
     })
 
-    dict_available = bool(_load_dictionary_words())
+    dict_words = _load_dictionary_words()
     dict_match = match_info.get("dictionary_word", {})
-    if not dict_available:
+    normalized = normalize(password)
+    if not dict_words:
         dict_status = "na"
         dict_detail = "Dictionary corpus not available (install NLTK 'words')."
-    elif dict_match.get("matched"):
+    elif normalized in dict_words:
         dict_status = "fail"
+        dict_detail = f"Password is the dictionary word '{normalized}'."
+    elif dict_match.get("matched"):
+        dict_status = "pass"
         dict_detail = (
-            "Contains dictionary word(s): "
+            "Not a dictionary word on its own. Contains: "
             + ", ".join(dict_match.get("words", []))
         )
     else:
