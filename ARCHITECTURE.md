@@ -4,139 +4,122 @@ This document explains how the system is structured and why key decisions were m
 
 ## Overview
 
-A single-file Python CLI tool that evaluates password strength locally. The scoring engine combines length, character variety, common-password database detection, and dictionary word detection into a 0-100 score, then maps it to a human-readable strength rating. Common-password lists are stored in `data/` and English words come from the NLTK `words` corpus.
+A Python CLI tool that evaluates password strength. The numeric score comes from zxcvbn's pattern-aware strength estimate. Three detection checks run alongside it: a local common-password database, an NLTK dictionary scan, and a HaveIBeenPwned (HIBP) breach lookup. A separate module turns those results into a NIST SP 800-63B compliance report.
 
-```
-[User Input] -> [score_password()] -> (score, feedback, match_info) -> [get_rating()] -> [CLI Output]
-```
+The entry point is `password_checker.py`. All logic lives in `scripts/`:
+
+| Module | Responsibility |
+|---|---|
+| `password_checker.py` | CLI input and output, `--nist` routing, optional report prompt |
+| `scripts/core.py` | `score_password()`, the scoring and detection engine |
+| `scripts/pw_scoring.py` | Maps zxcvbn scores to 0-100 and 0-100 to a rating |
+| `scripts/pw_normalizer.py` | Leetspeak and symbol normalization |
+| `scripts/common_pw_and_dict.py` | Loads the common-password list and NLTK words, finds embedded words |
+| `scripts/hibp.py` | HIBP Pwned Passwords k-anonymity lookup |
+| `scripts/nist_checker.py` | NIST SP 800-63B Section 5.1.1.2 control matrix |
+| `scripts/download_wordlists.py` | Downloads the SecLists common-password list into `data/` |
 
 ## Key Components
 
-### COMMON_PATTERNS (list)
-A hardcoded fallback list of 30 common weak passwords (password, 123456, qwerty, admin, etc.), used only when no database file is present. 15 points are deducted per match.
+### score_password() (scripts/core.py)
+The core engine. Returns `(score, feedback, match_info)`.
 
-### normalize()
-Normalizes a password before list checks: lowercases it, translates leetspeak characters to letters (0 to o, 3 to e, @ to a, 1 to i, 5 to s, 7 to t, and more) via a `str.maketrans` table, then strips remaining non-alphanumeric characters. This turns `P@ssw0rd` into `password`, which naive matching would miss.
+1. Runs zxcvbn to get the guess estimate, entropy bits (log2 of guesses), the 0-4 zxcvbn score, and crack-time estimates.
+2. Converts the zxcvbn score to 0-100 with `entropy_to_score()`.
+3. Adds guidance feedback for length under 8, missing character classes, and length of 16 or less when the zxcvbn score is below 4. Guidance never changes the score.
+4. Checks the common-password database (see below). A match caps the score at 20.
+5. Scans for embedded dictionary words. Matches are reported as feedback only.
+6. Queries HIBP. A breach hit caps the score at 20. A failed lookup adds an explicit warning.
+7. Clamps the score to 0-100.
 
-### _load_common_passwords()
-Lazily reads `data/common-passwords.txt` (latin-1) into a `set` for O(1) exact-match lookups, cached after first load. Returns an empty set if the file is missing.
+`match_info` holds `common_password`, `dictionary_word`, `entropy` (bits, guesses, score, crack_times, failed) and `hibp` (checked, pwned, count, error).
 
-### _load_dictionary_words()
-Lazily loads the NLTK `words` corpus into a `set` of words at least 4 characters long. If NLTK or the corpus is unavailable it attempts a quiet `nltk.download("words")`, then falls back to an empty set with a console hint. Never raises.
+### entropy_to_score() and get_rating() (scripts/pw_scoring.py)
+`entropy_to_score()` multiplies the zxcvbn score by 25, so possible scores are 0, 25, 50, 75 and 100. `get_rating()` maps the score to Very Weak (<30), Weak (<50), Moderate (<70), Strong (<90) or Very Strong (90+).
 
-### _find_dictionary_words()
-Generates every 4+ character substring of the normalized password and checks each against the dictionary set. Longest matches are returned first.
+### normalize() and normalize_symbols() (scripts/pw_normalizer.py)
+`normalize()` lowercases the password, applies the full leetspeak table (digits and symbols, for example 0 to o, 3 to e, @ to a, $ to s), then strips non-alphanumeric characters. It turns `P@ssw0rd` into `password`.
 
-### score_password()
-The core scoring engine. It evaluates a password in four phases:
-1. **Length scoring** - up to 40 points based on thresholds (8, 12, 16 characters)
-2. **Character variety scoring** - up to 40 points, 10 points each for uppercase, lowercase, digits, and symbols
-3. **Common-password check** - 20 points deducted for an exact hit against the database; 15 per hardcoded pattern match when the database is absent
-4. **Dictionary word check** - 10 points deducted per unique matched word, capped at 3 words
-5. **Clean bonus** - 20 points added when neither the common-password nor the dictionary check matched, so a full-score password is achievable
+`normalize_symbols()` only translates `@` to a and `$` to s, then strips other symbols, leaving digits intact. It turns `P@ssword1` into `password1`, which the full table would turn into `passwordi`.
 
-Returns a clamped score (0-100), a list of feedback strings, and a `match_info` dict containing detailed match flags and an `entropy` dictionary with:
-  - `bits`: Pattern-aware entropy ($\log_2(\text{guesses})$)
-  - `guesses`: Estimate of guesses to crack
-  - `score`: zxcvbn strength score (0-4)
-  - `crack_times`: Display representations of crack times across different setups
+### Common-password lookup
+The database is checked against three candidates in order: the fully normalized password, the symbol-only normalized password, and the plain lowercase password. The first hit wins.
 
-### get_rating()
-Maps a numeric score to one of five strength labels: Very Weak (<30), Weak (<50), Moderate (<70), Strong (<90), Very Strong (90+).
+### _load_common_passwords() (scripts/common_pw_and_dict.py)
+Lazily reads `data/common-passwords.txt` (latin-1) into a cached `set` for O(1) lookups. Returns an empty set if the file is missing, which skips the check.
 
-### main()
-Handles CLI I/O, prompts for a password, calls the scoring functions, and prints the score, rating, pattern-aware entropy analysis, feedback, and detection summary to stdout. With `--nist` it delegates to `scripts/nist_checker.main()` instead.
+### _load_dictionary_words() and _find_dictionary_words()
+NLTK and its `words` corpus are required. If either is missing, the module exits at import with install instructions. Words of 4 or more characters are cached in a `set`. `_find_dictionary_words()` checks every 4+ character substring of the normalized password and returns matches longest first.
 
-### scripts/nist_checker.check_nist_compliance()
-The NIST SP 800-63B compliance engine (Version 1.3). Accepts a password plus the `match_info` dict produced by `score_password()` and returns a structured report: a 10-item control matrix against Section 5.1.1.2, each item carrying a clause, requirement level (SHALL/SHOULD), status (pass/fail/na/info), and detail, plus an overall `compliant`/`non-compliant` verdict and a summary. The verdict is non-compliant when any SHALL/SHOULD item fails; `na` and `info` items never flip it.
+### hibp_check() (scripts/hibp.py)
+Hashes the password with SHA-1 and splits the hex digest into a 5-character prefix and 35-character suffix. Only the prefix is sent to `https://api.pwnedpasswords.com/range/{prefix}`. The response lists every known suffix for that prefix with a breach count, and the suffix is compared locally. Any network error, timeout or non-200 response raises `HIBPError`, which `hibp_check()` turns into `{"checked": False, ...}` so an outage is never reported as safe.
 
-### scripts/nist_checker._print_report()
-Renders the report as a control-matrix table to stdout, showing status per item and the cited clause plus detail for failed, not-assessed, and informational items.
+### check_nist_compliance() (scripts/nist_checker.py)
+Takes the password and the `match_info` from `score_password()` and returns a 10-item control matrix against Section 5.1.1.2. Each item has a clause, a SHALL/SHOULD level, a status (pass, fail, na, info) and a detail. Any failed item makes the verdict non-compliant.
 
-### scripts/hibp.HIBPError
-A typed exception raised by `_query_range()` whenever the API call fails for any reason (network error, timeout, non-200 HTTP status). Keeping it typed lets `hibp_check()` catch it precisely without swallowing unrelated exceptions.
+The dictionary control (item 6) fails only when the whole normalized password is a dictionary word. Passwords that merely contain words, such as passphrases, pass, and the contained words appear in the item detail.
 
-### scripts/hibp._hash_password()
-Hashes the password with SHA-1 and splits the uppercase hex digest at position 5, returning `(prefix, suffix)`. Only the 5-character prefix ever leaves this process. The 35-character suffix stays local and is compared client-side against the API response. This is the k-anonymity model used by the HIBP Pwned Passwords API.
-
-### scripts/hibp._query_range()
-Calls `GET https://api.pwnedpasswords.com/range/{prefix}` with a 10-second timeout via stdlib `urllib`. Returns the raw response text (one `SUFFIX:COUNT` pair per line). Raises `HIBPError` on any failure so the caller can never silently treat an outage as "password is safe".
-
-### scripts/hibp._parse_response()
-Scans the returned blob line by line, looking for a case-insensitive match against the local suffix. Returns the integer breach count if found, or 0 if the suffix is absent (password not seen in any known breach). Testable offline with a hardcoded fake response.
-
-### scripts/hibp.hibp_check()
-Public entry point. Wires `_hash_password` -> `_query_range` -> `_parse_response` and returns a clean result dict: `{"checked": True, "pwned": bool, "count": int, "error": None}` on success, or `{"checked": False, "pwned": False, "count": 0, "error": str}` on failure. Callers must inspect `checked` before treating `pwned: False` as confirmation of safety.
+### nist_checker.main()
+Parses `--json`, `--username` and `--service`. When called from `password_checker.py` after the report prompt, it receives the existing password and `match_info` and reuses them. When run on its own (`--nist` or directly), it prompts for the password and calls `score_password()` itself.
 
 ## Design Decisions
 
-- **Compliance as a control matrix** (Version 1.3).
-  **Reasoning:** Auditing a verifier against a regulatory text maps naturally to a checklist of controls, each tied to a specific clause with a SHALL/SHOULD level. This mirrors how GRC analysts encode standards, and it keeps each failure auditable by citing the exact clause that was violated.
+- **zxcvbn score as the only source of the numeric score** (Version 1.4.1).
+  **Reasoning:** Rule-based checklists reward predictable patterns, and Shannon entropy overstates the strength of human-chosen passwords. zxcvbn models real attacker guessing, so its 0-4 score is used directly.
 
-- **Feed the v1.1/v1.2 results in, do not re-implement** (Version 1.3).
-  **Reasoning:** The breach and dictionary checks already live in `score_password()` and its `match_info` output; the entropy estimate already comes from zxcvbn. The compliance module consumes those results as inputs, so there is one source of truth and no duplicated list loading or scoring logic.
+- **Detections cap the score instead of subtracting points** (Version 1.4, extended in 1.4.2).
+  **Reasoning:** A password that appears in a breach or on a common list is weak no matter how random it looks. Capping at 20 guarantees a Very Weak rating instead of a partial penalty.
+
+- **Guidance is never a rejection rule.**
+  **Reasoning:** NIST SP 800-63B forbids composition rules. Character-class and length tips are shown as suggestions only.
+
+- **Hidden password input** (Version 1.4.2).
+  **Reasoning:** `getpass` keeps the password off the screen and out of terminal scrollback.
+
+- **Normalization before checking.**
+  **Reasoning:** Attackers routinely substitute leetspeak characters. Checking several normalized forms catches `P@ssw0rd` and `P@ssword1` without guessing which digits are letters.
+
+- **Set-based exact match for the breach database.**
+  **Reasoning:** `set` membership is O(1), which matters with a million entries.
+
+- **NLTK `words` corpus for the dictionary.**
+  **Reasoning:** About 236k English words with no wordlist committed to the repo.
+
+- **k-anonymity for HIBP** (Version 1.4).
+  **Reasoning:** The plaintext and full hash never leave the machine, and no API key is needed.
+
+- **Compliance as a control matrix** (Version 1.3).
+  **Reasoning:** Auditing against a standard maps naturally to a checklist of controls, each tied to a clause and a SHALL/SHOULD level, which keeps every failure traceable.
+
+- **Reuse results instead of re-running checks** (Version 1.3, extended in 1.4.2).
+  **Reasoning:** The compliance module consumes `match_info` rather than repeating the checks, so there is one source of truth and only one HIBP request per run.
 
 - **Entropy is a screening tool, not a rejection rule** (Version 1.3).
-  **Reasoning:** SP 800-63B recommends a password-strength meter as guidance to the user, not as a direct rule for rejecting passwords. The compliance item therefore reports entropy as informational and never contributes to a non-compliant verdict, matching the standard's intent.
+  **Reasoning:** SP 800-63B recommends a strength meter as user guidance. The entropy item is informational and never affects the verdict.
 
-- **By-design controls still appear in the matrix** (Version 1.3).
-  **Reasoning:** Composition rules, rotation, and hints are verifier-side policies. Since this tool enforces none of them, those controls pass with a note that they are not enforced, which is the correct audit reading rather than omitting them.
-
-## Data Flow
-
-- **Primary dependence on pattern-aware entropy (zxcvbn)** (Version 1.2).
-  **Reasoning:** While rule-based checklists are simple, they have been deprecated by modern standards (such as NIST SP 800-63B) in favor of mathematically grounded strength evaluation. Shannon entropy calculates the theoretical upper bound of strength but is a security liability for human-chosen passwords, which are heavily patterned. Therefore, we utilize the `zxcvbn` library exclusively to assess guess-resistance, pattern-awareness, and scenario-based crack times. This is the only realistic way to assess real-world password security.
-
-- **Set-based exact match for the breach database** over a list scan.
-  **Reasoning:** Membership in a `set` is O(1) versus O(n) for a list. This matters when checking against millions of entries per request. RockYou-style lists store full passwords, so exact matching is the correct semantic.
-
-- **Normalization before checking** against both the database and the dictionary.
-  **Reasoning:** Attackers routinely substitute leetspeak characters. Normalizing catches `P@ssw0rd`, which naive matching misses, and documenting this logic shows understanding of real attacker behavior.
-
-- **Database supersedes the hardcoded list** when present.
-  **Reasoning:** The downloaded database is a strict superset of the hardcoded patterns, so the fallback only runs when the data file is missing. The fallback scans both the raw and normalized forms.
-
-- **Dictionary check via substring matching** of 4+ character substrings.
-  **Reasoning:** Catches cases like `Password123` containing `password`. Longest matches are reported first to keep feedback readable.
-
-- **NLTK `words` corpus for the dictionary** with graceful degradation.
-  **Reasoning:** ~236k common English words with zero wordlist files committed to the repo. When NLTK is unavailable the check is skipped with a hint instead of crashing.
-
-- **Differentiated penalties** (20 for breach, 10 per dictionary word, 15 for hardcoded fallback).
-  **Reasoning:** Membership in a breached-password database is the highest-signal signal and should cost the most.
-
-- **Clean bonus of 20 points** when no detection matches.
-  **Reasoning:** Length (40) plus variety (40) only reaches 70, which made 100/100 and the Very Strong rating unreachable. The bonus rewards genuinely clean passwords and keeps the full 0-100 scale meaningful.
-
-- **Score clamped to 0-100** rather than allowing negative values.
-  **Reasoning:** A bounded scale is more intuitive for end users and maps cleanly to the five-tier rating system.
+- **Policy controls still appear in the matrix** (Version 1.3).
+  **Reasoning:** Composition rules, rotation and hints are verifier-side policies this tool does not enforce, so they pass with a note instead of being omitted.
 
 ## Data Flow
 
-1. User runs `python password_checker.py`
-2. Program prompts for password input via `input()`
-3. `score_password()` processes the password:
-   - Calculates length score (0-30)
-   - Checks character classes and adds variety score (0-40)
-   - Normalizes the password and checks it against the common-password database (or the hardcoded fallback)
-   - Scans normalized substrings against the dictionary and deducts penalties
-   - Adds the clean bonus when no detection matched
-   - Runs the `zxcvbn` analyzer to estimate guesses, bits of entropy, and crack times
-   - Clamps final score to 0-100
-4. `get_rating()` maps score to a strength label
-5. Score, rating, pattern-aware entropy metrics, feedback, and detection details are printed to stdout
-6. Program exits, no state is persisted
+1. The user runs `python password_checker.py` and enters a password at a hidden prompt.
+2. `score_password()` runs zxcvbn, builds guidance feedback, checks the common-password database, scans for dictionary words and queries HIBP.
+3. `get_rating()` maps the score to a label.
+4. The score, rating, entropy analysis, feedback and detections are printed.
+5. The user is asked whether to generate a NIST report. On `y` or `yes`, `nist_checker.main()` builds it from the same `match_info`.
+6. The program exits. No state is persisted.
 
 ## Data Files
 
-- `data/common-passwords.txt` - breached/common passwords, one per line. Downloaded with `python scripts/download_wordlists.py` (SecLists top 100k/1M). Gitignored because it is large.
-- English dictionary words come from the NLTK `words` corpus at runtime, not from repo files.
+- `data/common-passwords.txt`: breached/common passwords, one per line. Created with `python scripts/download_wordlists.py` (SecLists top 10k, 100k or 1M). Gitignored because it is large.
+- English dictionary words come from the NLTK `words` corpus at runtime.
 
 ## Known Limitations / Future Work
 
-- Breach check is exact-match only; a full RockYou-scale list will slow first-load slightly but lookups stay O(1)
-- HIBP check adds ~1-2s network latency per run; no caching between runs
-- Dictionary substring matching can report incidental matches (for example `sword` inside `password`)
-- No password generation suggestions
-- No GUI, CLI only
-- Single-threaded, interactive use only, no batch mode
+- The common-password check is exact-match on three normalized forms. Mixed cases such as `M0nkey!2024`, where some digits are letters and others are numbers, are still missed.
+- The score has only five possible values because it comes straight from the zxcvbn 0-4 score.
+- The HIBP check adds about 1-2 seconds of network latency per run, with no caching.
+- Dictionary substring matching reports incidental matches (for example `sword` inside `password`).
+- The NIST report follows SP 800-63B Revision 3 (Section 5.1.1.2), not Revision 4.
+- No tests yet.
+- CLI only, interactive use only, no batch mode.

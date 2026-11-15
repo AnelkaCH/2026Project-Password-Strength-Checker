@@ -21,7 +21,8 @@ A Python CLI tool that scores password strength using zxcvbn pattern-aware entro
 - Checks passwords against a breached/common password database (SecLists, top 1M) using O(1) set lookups
 - Catches dictionary words hidden inside passwords, including leetspeak variants like `P@ssw0rd`
 - Checks the password against the HaveIBeenPwned Pwned Passwords API using k-anonymity: only a 5-character SHA-1 prefix is sent, the plaintext and full hash never leave your machine; no API key required
-- Caps the score at 20 when a breach hit is found; treats an API failure as an explicit warning rather than a pass
+- Caps the score at 20 when the password is found in HIBP or on the common-password list; treats an API failure as an explicit warning rather than a pass
+- Hides the password while you type it
 - Skips the local breach check cleanly when the database file is absent (the NIST report marks that control not assessed)
 - Uses the `zxcvbn` library for pattern-aware entropy scoring and realistic crack-time estimates
 - Runs a full NIST SP 800-63B Section 5.1.1.2 compliance check, with a control matrix of pass, fail, not assessed, and informational statuses and the exact clause cited for each failure
@@ -29,7 +30,7 @@ A Python CLI tool that scores password strength using zxcvbn pattern-aware entro
 
 ## How It Works
 
-When a password is entered, it gets normalized first (lowercased, leetspeak translated, symbols stripped) so obfuscated versions still get caught properly. The numeric score comes from zxcvbn's pattern-aware guess estimate: guesses are converted to entropy bits via log2, then mapped onto the 0-100 scale using fixed bit thresholds at 28, 36, 60, and 80 bits, clamped, and mapped to a strength rating. Separately, an exact-match check runs against a breached/common password database and a dictionary scan finds embedded words through 4+ character substring matching; both surface only as feedback and detection details, never as score adjustments, and both feed the NIST compliance report.
+When a password is entered, it gets normalized first (lowercased, leetspeak translated, symbols stripped) so obfuscated versions still get caught properly. The numeric score comes from zxcvbn's pattern-aware strength score (0 to 4), multiplied by 25 to give 0, 25, 50, 75, or 100, then mapped to a strength rating. Entropy bits (log2 of zxcvbn's guess estimate) and crack times are shown alongside it. Separately, an exact-match check runs against a breached/common password database, trying the fully normalized password, a symbol-only version that keeps digits (so `P@ssword1` matches `password1`), and the plain lowercase password. A match caps the score at 20. A dictionary scan finds embedded words through 4+ character substring matching and surfaces them as feedback only. Both checks feed the NIST compliance report.
 
 Version 1.2 added `zxcvbn` for entropy analysis, which looks at guess difficulty instead of just counting character types, and gives crack time estimates under different attack conditions.
 

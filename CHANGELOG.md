@@ -9,10 +9,32 @@
 - Encrypted local vault
 - Web/App UI version
 
+## [2026-11-16] Version 1.4.2 - Fixes and Cleanup
+
+### Added
+- `normalize_symbols()` in `scripts/pw_normalizer.py`, which translates only `@` and `$` and keeps digits, so `P@ssword1` now matches `password1` on the common-password list
+
+### Changed
+- Password input is now hidden with `getpass` in both `password_checker.py` and `scripts/nist_checker.py`
+- A match on the common-password list now caps the score at 20, the same as an HIBP hit
+- The NIST dictionary control now fails only when the whole password is a dictionary word, so passphrases that contain words can pass
+- The compliance report generated after the main check reuses the existing results instead of running every check (and the HIBP request) again
+- The "longer than 16 characters" tip only appears when the zxcvbn score is below 4
+- The report prompt is now `(y/n)` and accepts `y` or `yes`
+- Crack-time output no longer relies on Python 3.12+ f-string syntax
+- Rewrote `ARCHITECTURE.md` and updated `README.md` to match the current code
+
+### Fixed
+- The common-password list was looked up in `scripts/data/` instead of `data/`, so the check never ran after the 1.4.1 restructure
+
+### Removed
+- Unused imports in `password_checker.py`
+- The unreachable "dictionary not available" branch in the NIST report, since NLTK is required
+
 ## [2026-08-27] Version 1.4.1 - The Restructure
 
 ### Added
-- After running `password_checker.py`, users can generate a compliance report by answer the question at the end
+- After running `password_checker.py`, users can generate a compliance report by answering the question at the end
 
 ### Changed
 - Changed zxcvbn scoring to the one already made by zxcvbn
