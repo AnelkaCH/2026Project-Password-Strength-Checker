@@ -1,12 +1,16 @@
 import getpass
-import math
-import re
 import sys
-import zxcvbn
-from scripts.nist_checker import main as nist_main
 
 from scripts.core import score_password
+from scripts.nist_checker import main as nist_main
 from scripts.pw_scoring import get_rating
+
+CRACK_TIME_SCENARIOS = [
+    ("Online throttling (100/hr)", "online_throttling_100_per_hour"),
+    ("Online no throttling (10/sec)", "online_no_throttling_10_per_second"),
+    ("Offline slow hashing (10k/sec)", "offline_slow_hashing_1e4_per_second"),
+    ("Offline fast hashing (10B/sec)", "offline_fast_hashing_1e10_per_second"),
+]
 
 
 def main():
@@ -53,37 +57,8 @@ def main():
 
     crack_times = entropy["crack_times"]
 
-    print(
-        "  * Online throttling (100/hr): "
-        f"{crack_times.get(
-            'online_throttling_100_per_hour',
-            'N/A'
-        )}"
-    )
-
-    print(
-        "  * Online no throttling (10/sec): "
-        f"{crack_times.get(
-            'online_no_throttling_10_per_second',
-            'N/A'
-        )}"
-    )
-
-    print(
-        "  * Offline slow hashing (10k/sec): "
-        f"{crack_times.get(
-            'offline_slow_hashing_1e4_per_second',
-            'N/A'
-        )}"
-    )
-
-    print(
-        "  * Offline fast hashing (10B/sec): "
-        f"{crack_times.get(
-            'offline_fast_hashing_1e10_per_second',
-            'N/A'
-        )}"
-    )
+    for label, key in CRACK_TIME_SCENARIOS:
+        print(f"  * {label}: {crack_times.get(key, 'N/A')}")
 
     print()
     print("Feedback:")
@@ -131,9 +106,11 @@ def main():
     else:
         print("- HaveIBeenPwned: not found in any known breach")
 
-    ask_for_report = input("Do you want a compliance report? (Y/N/Whatever): ").strip().lower()
+    print()
+    ask_for_report = input("Do you want a NIST compliance report? (y/n): ").strip().lower()
 
-    if ask_for_report == "y":
+    if ask_for_report in ("y", "yes"):
+        print()
         nist_main(password, match_info)
 
 

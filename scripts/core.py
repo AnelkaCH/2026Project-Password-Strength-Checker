@@ -87,7 +87,7 @@ def score_password(password):
             "Consider adding symbols."
         )
 
-    if length <= 16:
+    if length <= 16 and zxcvbn_score < 4:
         feedback.append(
             "Consider making your password longer than "
             "16 characters."
