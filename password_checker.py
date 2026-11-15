@@ -1,3 +1,4 @@
+import getpass
 import math
 import re
 import sys
@@ -20,7 +21,7 @@ def main():
     print("=== Password Strength Checker ===")
     print()
 
-    password = input("Enter password: ")
+    password = getpass.getpass("Enter password (hidden): ")
 
     score, feedback, match_info = score_password(
         password

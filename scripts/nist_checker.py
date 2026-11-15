@@ -1,4 +1,5 @@
 import argparse
+import getpass
 import json
 import sys
 import unicodedata
@@ -282,7 +283,7 @@ def main(given_password=None):
     if given_password  is not None:
         password = given_password
     else:
-        password = input("Enter password: ")
+        password = getpass.getpass("Enter password (hidden): ")
 
     _, _, match_info = score_password(password)
     report = check_nist_compliance(
