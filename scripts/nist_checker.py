@@ -113,10 +113,7 @@ def check_nist_compliance(password, match_info, username=None, service=None):
     dict_words = _load_dictionary_words()
     dict_match = match_info.get("dictionary_word", {})
     normalized = normalize(password)
-    if not dict_words:
-        dict_status = "na"
-        dict_detail = "Dictionary corpus not available (install NLTK 'words')."
-    elif normalized in dict_words:
+    if normalized in dict_words:
         dict_status = "fail"
         dict_detail = f"Password is the dictionary word '{normalized}'."
     elif dict_match.get("matched"):
