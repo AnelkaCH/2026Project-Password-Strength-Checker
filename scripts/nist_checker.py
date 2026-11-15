@@ -262,7 +262,7 @@ def _print_report(report):
     )
 
 
-def main(given_password=None):
+def main(given_password=None, match_info=None):
     parser = argparse.ArgumentParser(
         description="NIST SP 800-63B compliance checker"
     )
@@ -285,7 +285,8 @@ def main(given_password=None):
     else:
         password = getpass.getpass("Enter password (hidden): ")
 
-    _, _, match_info = score_password(password)
+    if match_info is None:
+        _, _, match_info = score_password(password)
     report = check_nist_compliance(
         password,
         match_info,

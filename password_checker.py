@@ -134,7 +134,7 @@ def main():
     ask_for_report = input("Do you want a compliance report? (Y/N/Whatever): ").strip().lower()
 
     if ask_for_report == "y":
-        nist_main(password)
+        nist_main(password, match_info)
 
 
 if __name__ == "__main__":
